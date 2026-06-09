@@ -81,91 +81,171 @@ def load_data(path_dict, fname, root_dir, cache_path=None):
 def create_thermo_df(data_dict):
     """
     Convert:
+
         {system: {property: {mean, stderr, n_blocks}}}
 
-    into a MultiIndex DataFrame:
-        index = (system, property)
-        columns = mean, stderr, n_blocks
+    into a styled MultiIndex DataFrame.
+
+    Returns
+    -------
+    pandas.io.formats.style.Styler
     """
     import pandas as pd
     import numpy as np
+
     records = []
 
-
     def format_number(x):
-        """Format number using regular notation if exponent is within ±3, else scientific."""
+        """
+        Use regular notation for exponents within ±3,
+        otherwise scientific notation.
+        """
         if x == 0:
-            return '0.000000'
-        
-        exponent = np.floor(np.log10(np.abs(x)))
-        
-        # Use regular notation for exponents between -3 and +3
-        if -3 <= exponent <= 3:
-            return f'{x:.6f}'
-        else:
-            return f'{x:.6e}'
+            return "0.000000"
 
+        exponent = np.floor(np.log10(np.abs(x)))
+
+        if -3 <= exponent <= 3:
+            return f"{x:.6f}"
+
+        return f"{x:.6e}"
 
     for system, props in data_dict.items():
+
         for prop, stats in props.items():
 
-            # allow both raw scalars and dict outputs
+            # Block-averaged result
             if isinstance(stats, dict):
+
                 records.append({
                     "system": system,
                     "property": prop,
-                    **stats
+                    "mean": stats.get("mean"),
+                    "stderr": stats.get("stderr"),
+                    "n_blocks": stats.get("n_blocks"),
                 })
+
+            # Scalar result
             else:
+
                 records.append({
                     "system": system,
                     "property": prop,
                     "mean": stats,
-                    "stderr": 0.0,
-                    "n_blocks": 1,
+                    "stderr": np.nan,
+                    "n_blocks": np.nan,
                 })
 
     df = pd.DataFrame(records)
-    df = df.set_index(["system", "property"]).sort_index()
-    
-    # Display with styling for better readability
-    return df.style.format({
-        'mean': format_number,
-        'stderr': format_number,
-    }).set_properties(**{'text-align': 'center'})
 
+    df = (
+        df
+        .set_index(["system", "property"])
+        .sort_index()
+    )
 
-def cached_thermo_props(cache_file, paths_dict, data_path, temperature, block_sizes):
+    return (
+        df.style
+        .format({
+            "mean": format_number,
+            "stderr": format_number,
+            "n_blocks": "{:.0f}",
+        })
+        .set_properties(**{
+            "text-align": "center"
+        })
+    )
+
+def cached_thermo_props(
+    cache_file,
+    paths_dict,
+    data_path,
+    temperature,
+    correlation_times,
+    block_factor=10,
+):
     """
-    Load or compute thermodynamic properties with caching and return styled DataFrame.
+    Load or compute thermodynamic properties
+    with caching.
+
+    Parameters
+    ----------
+    cache_file : str
+        JSON cache filename.
+
+    paths_dict : dict
+        Mapping of system names to paths.
+
+    data_path : str
+        Root directory for trajectory data.
+
+    temperature : float
+        Simulation temperature in K.
+
+    correlation_times : dict
+        Correlation times (in frames) for each property.
+
+    block_factor : int, default=10
+        Multiplier used to determine block sizes:
+
+            block_size = correlation_time * block_factor
     """
     import json
     import os
+
     import utils.thermo_funcs as tf
-    
-    # Try to load from cache
+
+    # Load cached data
     if os.path.exists(cache_file):
-        with open(cache_file, 'r') as f:
-            print(f'Loaded thermodynamic properties from {cache_file}')
+
+        with open(cache_file, "r") as f:
+
+            print(
+                f"Loaded thermodynamic properties "
+                f"from {cache_file}"
+            )
+
             thermo_props = json.load(f)
+
     else:
-        # Compute if not cached
-        print(f'{cache_file} not found. Computing thermodynamic properties...')
-        print('Loading trajectory data...')
-        traj_data = load_data(paths_dict, fname='*.traj', root_dir=data_path)
-        print('Finished loading trajectory data.')
-        
-        print('Computing thermodynamic properties...')
+
+        print(
+            f"{cache_file} not found. "
+            f"Computing thermodynamic properties..."
+        )
+
+        print("Loading trajectory data...")
+
+        traj_data = load_data(
+            paths_dict,
+            fname="*.traj",
+            root_dir=data_path,
+        )
+
+        print("Finished loading trajectory data.")
+
+        print(
+            "Computing thermodynamic properties..."
+        )
+
         thermo_props = tf.get_thermo_props(
             traj_data,
             temperature=temperature,
-            block_sizes=block_sizes,
+            correlation_times=correlation_times,
+            block_factor=block_factor,
         )
-        
-        # Save to cache
-        with open(cache_file, 'w') as f:
-            json.dump(thermo_props, f, indent=2)
-        print(f'Saved thermodynamic properties to {cache_file}')
-    
-    # Return styled DataFrame
+
+        with open(cache_file, "w") as f:
+
+            json.dump(
+                thermo_props,
+                f,
+                indent=2,
+            )
+
+        print(
+            f"Saved thermodynamic properties "
+            f"to {cache_file}"
+        )
+
     return create_thermo_df(thermo_props)
