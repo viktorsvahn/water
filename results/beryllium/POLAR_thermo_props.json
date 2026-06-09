@@ -1,0 +1,56 @@
+{
+  "Be$^{2+}$(aq)": {
+    "Density /g cm-3": {
+      "mean": 1.0641339438557134,
+      "stderr": 0.005245116510780371,
+      "n_blocks": 3
+    },
+    "Heat Capacity /kJ mol-1 K-1": {
+      "mean": 3.513715544304116,
+      "stderr": 0.5587283657252446,
+      "n_blocks": 3
+    },
+    "Compressibility /Pa-1": {
+      "mean": 2.668408542390689e-10,
+      "stderr": 7.655727868811653e-11,
+      "n_blocks": 3
+    },
+    "Bulk Modulus /GPa": {
+      "mean": 4.3067250606735765,
+      "stderr": 0.980070211787709,
+      "n_blocks": 3
+    },
+    "Thermal Expansion /K-1": {
+      "mean": 0.0002811845577272342,
+      "stderr": 0.00025632264780479377,
+      "n_blocks": 3
+    }
+  },
+  "BeCl$_2$(aq)": {
+    "Density /g cm-3": {
+      "mean": 1.0858624757916864,
+      "stderr": 0.004466710058975539,
+      "n_blocks": 6
+    },
+    "Heat Capacity /kJ mol-1 K-1": {
+      "mean": 9.592689003323065,
+      "stderr": 2.7421561911085575,
+      "n_blocks": 6
+    },
+    "Compressibility /Pa-1": {
+      "mean": 1.9566531741408807e-10,
+      "stderr": 2.7860382187000923e-11,
+      "n_blocks": 6
+    },
+    "Bulk Modulus /GPa": {
+      "mean": 5.670996645279732,
+      "stderr": 0.8386574861019839,
+      "n_blocks": 6
+    },
+    "Thermal Expansion /K-1": {
+      "mean": 5.9374743837581696e-05,
+      "stderr": 0.00010255133431661809,
+      "n_blocks": 6
+    }
+  }
+}
