@@ -75,9 +75,6 @@ def load_data(path_dict, fname, root_dir, cache_path=None):
     return loaded_data
 
 
-
-
-
 def create_thermo_df(data_dict):
     """
     Convert:
@@ -155,6 +152,7 @@ def create_thermo_df(data_dict):
             "text-align": "center"
         })
     )
+
 
 def cached_thermo_props(
     cache_file,

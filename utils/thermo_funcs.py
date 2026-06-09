@@ -2,44 +2,63 @@ import numpy as np
 from ase import units
 
 
-def split_blocks(x, correlation_time):
+def split_blocks(
+    x,
+    correlation_time,
+    block_factor=10,
+):
     """
-    Split a 1D array into blocks.
+    Split a 1D array into statistically
+    independent blocks.
 
     Parameters
     ----------
     x : array-like
         Time series data.
+
     correlation_time : int
-        Block size used for statistical averaging.
+        Estimated correlation time in frames.
+
+    block_factor : int, default=10
+        Block size multiplier.
 
     Returns
     -------
-    ndarray, shape (n_blocks, correlation_time)
+    ndarray
+        Shape (n_blocks, block_size)
     """
-    n_blocks = len(x) // correlation_time
+    block_size = int(
+        np.ceil(correlation_time * block_factor)
+    )
+
+    n_blocks = len(x) // block_size
 
     if n_blocks < 2:
         raise ValueError(
-            f"Need at least 2 blocks, got {n_blocks}. "
-            f"Increase trajectory length or decrease "
-            f"correlation_time."
+            f"Need at least 2 blocks, got "
+            f"{n_blocks}. Increase trajectory "
+            f"length or decrease block_factor."
         )
 
-    x = np.asarray(x[: n_blocks * correlation_time])
+    x = np.asarray(
+        x[: n_blocks * block_size]
+    )
 
-    return x.reshape(n_blocks, correlation_time)
-
+    return x.reshape(n_blocks, block_size)
 
 def summarize_blocks(values):
     """
-    Compute mean and standard error from block values.
+    Compute mean and standard error from
+    block-averaged values.
     """
     values = np.asarray(values)
 
     return {
         "mean": values.mean(),
-        "stderr": values.std(ddof=1) / np.sqrt(len(values)),
+        "stderr": (
+            values.std(ddof=1)
+            / np.sqrt(len(values))
+        ),
         "n_blocks": len(values),
     }
 
@@ -72,6 +91,7 @@ def compute_enthalpy_series(
 def compute_density(
     traj,
     correlation_time=None,
+    block_factor=10,
 ):
     """
     Density in g/cm^3.
@@ -91,6 +111,7 @@ def compute_density(
     blocks = split_blocks(
         density,
         correlation_time,
+        block_factor,
     )
 
     block_values = blocks.mean(axis=1)
@@ -102,6 +123,7 @@ def compute_heat_capacity(
     traj,
     temperature,
     correlation_time=None,
+    block_factor=10,
 ):
     """
     Cp in kJ/mol/K.
@@ -114,7 +136,10 @@ def compute_heat_capacity(
 
         cp = (
             np.var(enthalpy, ddof=1)
-            / (k_b * temperature**2)
+            / (
+                k_b
+                * temperature**2
+            )
         )
 
         cp *= units.mol / units.kJ
@@ -126,11 +151,15 @@ def compute_heat_capacity(
     for block in split_blocks(
         enthalpy,
         correlation_time,
+        block_factor,
     ):
 
         cp = (
             np.var(block, ddof=1)
-            / (k_b * temperature**2)
+            / (
+                k_b
+                * temperature**2
+            )
         )
 
         cp *= units.mol / units.kJ
@@ -146,6 +175,7 @@ def compute_compressibility(
     traj,
     temperature,
     correlation_time=None,
+    block_factor=10,
 ):
     """
     Isothermal compressibility in 1/Pa.
@@ -178,6 +208,7 @@ def compute_compressibility(
     for block in split_blocks(
         volumes,
         correlation_time,
+        block_factor,
     ):
 
         v_mean = block.mean()
@@ -204,6 +235,7 @@ def compute_bulk_modulus(
     traj,
     temperature,
     correlation_time=None,
+    block_factor=10,
 ):
     """
     Bulk modulus in GPa.
@@ -238,6 +270,7 @@ def compute_bulk_modulus(
     for block in split_blocks(
         volumes,
         correlation_time,
+        block_factor,
     ):
 
         v_mean = block.mean()
@@ -252,7 +285,8 @@ def compute_bulk_modulus(
         )
 
         bulk_blocks.append(
-            (pressure_unit / kappa) / 1e9
+            (pressure_unit / kappa)
+            / 1e9
         )
 
     return summarize_blocks(
@@ -264,6 +298,7 @@ def compute_thermal_expansion(
     traj,
     temperature,
     correlation_time=None,
+    block_factor=10,
 ):
     """
     Thermal expansion coefficient in 1/K.
@@ -297,11 +332,13 @@ def compute_thermal_expansion(
     volume_blocks = split_blocks(
         volumes,
         correlation_time,
+        block_factor,
     )
 
     enthalpy_blocks = split_blocks(
         enthalpy,
         correlation_time,
+        block_factor,
     )
 
     for v_block, h_block in zip(
@@ -309,8 +346,13 @@ def compute_thermal_expansion(
         enthalpy_blocks,
     ):
 
-        d_v = v_block - v_block.mean()
-        d_h = h_block - h_block.mean()
+        d_v = (
+            v_block - v_block.mean()
+        )
+
+        d_h = (
+            h_block - h_block.mean()
+        )
 
         cov = np.mean(d_v * d_h)
 
@@ -334,11 +376,28 @@ def get_thermo_props(
     data_dict,
     temperature=350.0,
     correlation_times=None,
+    block_factor=10,
 ):
     """
+    Compute thermodynamic properties with
+    optional block averaging.
+
     Parameters
     ----------
+    data_dict : dict
+        Dictionary of trajectories.
+
+    temperature : float
+        Temperature in K.
+
     correlation_times : dict or None
+        Correlation times in frames.
+
+    block_factor : int, default=10
+        Multiplier used to determine block size:
+
+            block_size =
+                correlation_time * block_factor
 
     Example
     -------
@@ -350,7 +409,9 @@ def get_thermo_props(
         "thermal_expansion": 1000,
     }
     """
-    correlation_times = correlation_times or {}
+    correlation_times = (
+        correlation_times or {}
+    )
 
     results = {}
 
@@ -358,9 +419,13 @@ def get_thermo_props(
 
         results[key] = {
 
-            "Density /g cm-3": compute_density(
+            "Density /g cm-3":
+            compute_density(
                 traj,
-                correlation_times.get("density"),
+                correlation_times.get(
+                    "density"
+                ),
+                block_factor,
             ),
 
             "Heat Capacity /kJ mol-1 K-1":
@@ -370,6 +435,7 @@ def get_thermo_props(
                 correlation_times.get(
                     "heat_capacity"
                 ),
+                block_factor,
             ),
 
             "Compressibility /Pa-1":
@@ -379,6 +445,7 @@ def get_thermo_props(
                 correlation_times.get(
                     "compressibility"
                 ),
+                block_factor,
             ),
 
             "Bulk Modulus /GPa":
@@ -388,6 +455,7 @@ def get_thermo_props(
                 correlation_times.get(
                     "bulk_modulus"
                 ),
+                block_factor,
             ),
 
             "Thermal Expansion /K-1":
@@ -397,6 +465,7 @@ def get_thermo_props(
                 correlation_times.get(
                     "thermal_expansion"
                 ),
+                block_factor,
             ),
         }
 
