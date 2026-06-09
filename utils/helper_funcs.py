@@ -247,3 +247,125 @@ def cached_thermo_props(
         )
 
     return create_thermo_df(thermo_props)
+
+
+def cached_hop_props(
+    cache_file,
+    paths_dict,
+    data_path,
+    correlation_times,
+    block_factor=10,
+    cutoff=1.25,
+):
+    """
+    Load or compute proton hopping properties with caching.
+
+    Computes:
+    - Proton hop rate (hops/ps)
+    - Average proton residence time (ps)
+
+    Parameters
+    ----------
+    cache_file : str
+        JSON cache filename.
+
+    paths_dict : dict
+        Mapping of system names to paths.
+
+    data_path : str
+        Root directory for trajectory data.
+
+    correlation_times : dict
+        Correlation times (in frames) for each property.
+        Expected keys: 'hop_rate', 'residence_time'
+
+    block_factor : int, default=10
+        Multiplier used to determine block sizes:
+
+            block_size = correlation_time * block_factor
+
+    cutoff : float, default=1.25
+        Distance cutoff for O-H assignment (Å).
+    """
+    import json
+    import os
+
+    import utils.proton_hop as ph
+
+    # Load cached data
+    if os.path.exists(cache_file):
+
+        with open(cache_file, "r") as f:
+
+            print(
+                f"Loaded proton hopping properties "
+                f"from {cache_file}"
+            )
+
+            hop_props = json.load(f)
+
+    else:
+
+        print(
+            f"{cache_file} not found. "
+            f"Computing proton hopping properties..."
+        )
+
+        print("Loading trajectory data...")
+
+        traj_data = load_data(
+            paths_dict,
+            fname="*.traj",
+            root_dir=data_path,
+        )
+
+        print("Finished loading trajectory data.")
+
+        print(
+            "Computing proton hopping properties..."
+        )
+
+        hop_props = {}
+
+        for system_name, traj in traj_data.items():
+
+            print(f"  Processing {system_name}...")
+
+            hop_props[system_name] = {}
+
+            # Hop rate
+            if 'hop_rate' in correlation_times:
+                hop_props[system_name]['hop_rate'] = (
+                    ph.compute_hop_rate_blocks(
+                        traj,
+                        correlation_time=correlation_times['hop_rate'],
+                        block_factor=block_factor,
+                        cutoff=cutoff,
+                    )
+                )
+
+            # Residence time
+            if 'residence_time' in correlation_times:
+                hop_props[system_name]['residence_time'] = (
+                    ph.compute_residence_time_blocks(
+                        traj,
+                        correlation_time=correlation_times['residence_time'],
+                        block_factor=block_factor,
+                        cutoff=cutoff,
+                    )
+                )
+
+        with open(cache_file, "w") as f:
+
+            json.dump(
+                hop_props,
+                f,
+                indent=2,
+            )
+
+        print(
+            f"Saved proton hopping properties "
+            f"to {cache_file}"
+        )
+
+    return create_thermo_df(hop_props)

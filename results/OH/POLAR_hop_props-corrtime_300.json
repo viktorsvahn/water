@@ -1,0 +1,26 @@
+{
+  "OH$^-$(aq)": {
+    "hop_rate": {
+      "mean": 1.0256410256410258,
+      "stderr": 0.6020638039438061,
+      "n_blocks": 13
+    },
+    "residence_time": {
+      "mean": 3.268294387651206,
+      "stderr": 1.122387709468344,
+      "n_blocks": 13
+    }
+  },
+  "OH$^*$(aq)": {
+    "hop_rate": {
+      "mean": 0.0,
+      "stderr": 0.0,
+      "n_blocks": 13
+    },
+    "residence_time": {
+      "mean": NaN,
+      "stderr": NaN,
+      "n_blocks": 0
+    }
+  }
+}
