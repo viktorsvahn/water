@@ -96,7 +96,25 @@ def create_thermo_df(data_dict):
         """
         Use regular notation for exponents within ±3,
         otherwise scientific notation.
+        Handles None and NaN safely.
         """
+        import numpy as np
+
+        # ✅ Handle missing values FIRST
+        if x is None:
+            return "—"   # or "NaN" if you prefer
+
+        # Convert safely to float
+        try:
+            x = float(x)
+        except (TypeError, ValueError):
+            return "—"
+
+        # Handle NaN
+        if np.isnan(x):
+            return "—"
+
+        # Handle zero
         if x == 0:
             return "0.000000"
 
@@ -106,6 +124,7 @@ def create_thermo_df(data_dict):
             return f"{x:.6f}"
 
         return f"{x:.6e}"
+
 
     for system, props in data_dict.items():
 
@@ -253,9 +272,10 @@ def cached_hop_props(
     cache_file,
     paths_dict,
     data_path,
-    correlation_times,
+    correlation_times=None,
     block_factor=10,
     cutoff=1.25,
+    use_blocks=True,
 ):
     """
     Load or compute proton hopping properties with caching.
@@ -275,17 +295,20 @@ def cached_hop_props(
     data_path : str
         Root directory for trajectory data.
 
-    correlation_times : dict
+    correlation_times : dict or None
         Correlation times (in frames) for each property.
         Expected keys: 'hop_rate', 'residence_time'
 
     block_factor : int, default=10
         Multiplier used to determine block sizes:
-
             block_size = correlation_time * block_factor
 
     cutoff : float, default=1.25
         Distance cutoff for O-H assignment (Å).
+
+    use_blocks : bool, default=True
+        If True → use block statistics
+        If False → use full trajectory (no blocks)
     """
     import json
     import os
@@ -333,27 +356,49 @@ def cached_hop_props(
 
             hop_props[system_name] = {}
 
-            # Hop rate
-            if 'hop_rate' in correlation_times:
-                hop_props[system_name]['hop_rate'] = (
-                    ph.compute_hop_rate_blocks(
-                        traj,
-                        correlation_time=correlation_times['hop_rate'],
-                        block_factor=block_factor,
-                        cutoff=cutoff,
-                    )
-                )
+            if use_blocks:
+                # ----- BLOCK STATISTICS -----
 
-            # Residence time
-            if 'residence_time' in correlation_times:
-                hop_props[system_name]['residence_time'] = (
-                    ph.compute_residence_time_blocks(
-                        traj,
-                        correlation_time=correlation_times['residence_time'],
-                        block_factor=block_factor,
-                        cutoff=cutoff,
+                if correlation_times and 'hop_rate' in correlation_times:
+                    hop_props[system_name]['hop_rate'] = (
+                        ph.compute_hop_rate_blocks(
+                            traj,
+                            correlation_time=correlation_times['hop_rate'],
+                            block_factor=block_factor,
+                            cutoff=cutoff,
+                        )
                     )
-                )
+
+                if correlation_times and 'residence_time' in correlation_times:
+                    hop_props[system_name]['residence_time'] = (
+                        ph.compute_residence_time_blocks(
+                            traj,
+                            correlation_time=correlation_times['residence_time'],
+                            block_factor=block_factor,
+                            cutoff=cutoff,
+                        )
+                    )
+
+            else:
+                # ----- FULL TRAJECTORY -----
+
+                hop_props[system_name]['hop_rate'] = {
+                    "mean": ph.compute_hop_rate(
+                        traj,
+                        cutoff=cutoff,
+                    ),
+                    "stderr": np.nan,
+                    "n_blocks": 1,
+                }
+
+                hop_props[system_name]['residence_time'] = {
+                    "mean": ph.compute_avg_residence_time(
+                        traj,
+                        cutoff=cutoff,
+                    ),
+                    "stderr": None,
+                    "n_blocks": 1,
+                }
 
         with open(cache_file, "w") as f:
 
