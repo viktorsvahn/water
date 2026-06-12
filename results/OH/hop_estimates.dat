@@ -1,0 +1,4 @@
+Method,Barrier /eV,Time between hops /ps
+B3LYP,0.2,25
+wB97,0.4,54000
+CCSD(T),0.5,2900000
