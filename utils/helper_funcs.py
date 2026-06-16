@@ -100,7 +100,7 @@ def create_thermo_df(data_dict):
         """
         import numpy as np
 
-        # ✅ Handle missing values FIRST
+        # Handle missing values FIRST
         if x is None:
             return "—"   # or "NaN" if you prefer
 
