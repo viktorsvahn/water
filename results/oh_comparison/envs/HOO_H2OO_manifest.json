@@ -1,0 +1,26 @@
+{
+  "0": {
+    "peak": 2.125,
+    "file": "results/oh_comparison/envs/HOO_H2OO_shell0.xyz"
+  },
+  "1": {
+    "peak": 2.975,
+    "file": "results/oh_comparison/envs/HOO_H2OO_shell1.xyz"
+  },
+  "2": {
+    "peak": 4.725,
+    "file": "results/oh_comparison/envs/HOO_H2OO_shell2.xyz"
+  },
+  "_shells": {
+    "peaks": [
+      2.125,
+      2.975,
+      4.725
+    ],
+    "cns": [
+      1.0092495375231239,
+      11.701714914254287,
+      20.034348282585878
+    ]
+  }
+}

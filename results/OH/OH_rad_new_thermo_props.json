@@ -1,0 +1,29 @@
+{
+  "OH$^*$(aq)": {
+    "Density /g cm-3": {
+      "mean": 1.1172923476605885,
+      "stderr": 0.0028192553447284135,
+      "n_blocks": 33
+    },
+    "Heat Capacity /kJ mol-1 K-1": {
+      "mean": 2.697686552252523,
+      "stderr": 0.396093605950296,
+      "n_blocks": 33
+    },
+    "Compressibility /Pa-1": {
+      "mean": 2.1673880795096688e-10,
+      "stderr": 1.2242150749617883e-11,
+      "n_blocks": 33
+    },
+    "Bulk Modulus /GPa": {
+      "mean": 5.160667611342873,
+      "stderr": 0.3207190799747319,
+      "n_blocks": 33
+    },
+    "Thermal Expansion /K-1": {
+      "mean": 0.0005057550876800896,
+      "stderr": 0.00011636899854780569,
+      "n_blocks": 33
+    }
+  }
+}
